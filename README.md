@@ -24,6 +24,30 @@ dotnet run
 
 Default local URL is shown in terminal (usually `https://localhost:7xxx`).
 
+## Database (EF Core + PostgreSQL)
+
+This project is configured with EF Core and PostgreSQL provider.
+
+- DbContext: `Data/AppDbContext.cs`
+- Sample read endpoint: `GET /api/v1/TodoItems`
+
+Set connection string via environment variable in production:
+
+```bash
+ConnectionStrings__DefaultConnection=Host=...;Port=5432;Database=...;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true
+```
+
+## Docker deploy
+
+`Dockerfile` is included for container build.
+
+- Render start command for Docker: use default image entrypoint
+- Exposed port: `8080`
+- Required env vars:
+  - `ASPNETCORE_ENVIRONMENT=Production`
+  - `ASPNETCORE_URLS=http://0.0.0.0:$PORT`
+  - `ConnectionStrings__DefaultConnection=<your-neon-connection-string>`
+
 ## Important endpoints
 
 - `GET /` : service info
