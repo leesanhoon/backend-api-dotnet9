@@ -18,15 +18,14 @@ public static class ApplicationBuilderExtensions
             dbContext.Database.EnsureCreated();
         }
 
-        app.UseSwagger();
-        app.UseSwaggerUI(options =>
-        {
-            options.SwaggerEndpoint("/swagger/v1/swagger.json", "backend-api-dotnet9 v1");
-            options.RoutePrefix = "swagger";
-        });
-
         if (app.Environment.IsDevelopment())
         {
+            app.UseSwagger();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "backend-api-dotnet9 v1");
+                options.RoutePrefix = "swagger";
+            });
             app.MapOpenApi();
         }
 
