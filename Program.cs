@@ -67,14 +67,15 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "backend-api-dotnet9 v1");
+    options.RoutePrefix = "swagger";
+});
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "backend-api-dotnet9 v1");
-        options.RoutePrefix = "swagger";
-    });
     app.MapOpenApi();
 }
 
@@ -86,11 +87,6 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapControllers();
 
-app.MapGet("/", () => Results.Ok(new
-{
-    service = "backend-api-dotnet9",
-    status = "ok",
-    documentation = "/openapi/v1.json"
-}));
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
