@@ -4,7 +4,7 @@ Backend API template using ASP.NET Core `.NET 9` for web/mobile clients.
 
 ## Features
 
-- Controller-based API
+- Controller-based API (`Category`, `Product`)
 - API versioning via URL segment (`/api/v1/...`) and header (`x-api-version`)
 - CORS configurable via `appsettings`
 - Swagger UI for API exploration
@@ -29,7 +29,8 @@ Default local URL is shown in terminal (usually `https://localhost:7xxx`).
 This project is configured with EF Core and PostgreSQL provider.
 
 - DbContext: `Data/AppDbContext.cs`
-- Sample read endpoint: `GET /api/v1/TodoItems`
+- Category CRUD: `/api/v1/Categories`
+- Product CRUD: `/api/v1/Products`
 
 Set connection string via environment variable in production:
 
@@ -50,10 +51,11 @@ ConnectionStrings__DefaultConnection=Host=...;Port=5432;Database=...;Username=..
 
 ## Important endpoints
 
-- `GET /` : service info
+- `GET /` : redirect to Swagger UI
 - `GET /health` : health check
 - `GET /swagger` : API docs (development)
-- `GET /api/v1/WeatherForecast` : sample versioned endpoint
+- `GET /api/v1/Categories`
+- `GET /api/v1/Products`
 
 ## Configure CORS
 
@@ -77,7 +79,7 @@ If `AllowedOrigins` is empty, API currently allows any origin.
 
 ## Suggested next steps
 
-1. Add authentication (JWT/OAuth2) and authorization policies.
-2. Add database + repositories/services.
+1. Add EF migrations and apply schema to Neon/PostgreSQL.
+2. Add authentication (JWT/OAuth2) and authorization policies.
 3. Add DTO validation and global error mapping.
 4. Add integration tests for critical endpoints.

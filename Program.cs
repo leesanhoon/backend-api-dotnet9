@@ -2,6 +2,8 @@ using Asp.Versioning;
 using backend_api_dotnet9.Data;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.WebUtilities;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +22,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
     }
 
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(NormalizeConnectionString(connectionString));
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -66,6 +68,16 @@ var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.EnsureCreated();
+}
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>
@@ -90,3 +102,41 @@ app.MapControllers();
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
+
+static string NormalizeConnectionString(string connectionString)
+{
+    if (!connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+        !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+    {
+        return connectionString;
+    }
+
+    var uri = new Uri(connectionString);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    if (userInfo.Length != 2)
+    {
+        throw new InvalidOperationException("Invalid PostgreSQL URL format. Expected username and password.");
+    }
+
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.Trim('/'),
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = Uri.UnescapeDataString(userInfo[1]),
+        SslMode = SslMode.Require
+    };
+
+    var query = QueryHelpers.ParseQuery(uri.Query);
+    var sslMode = query.TryGetValue("sslmode", out var sslModeValues)
+        ? sslModeValues.ToString()
+        : null;
+    if (!string.IsNullOrWhiteSpace(sslMode) &&
+        Enum.TryParse<SslMode>(sslMode, true, out var parsedSslMode))
+    {
+        builder.SslMode = parsedSslMode;
+    }
+
+    return builder.ConnectionString;
+}
