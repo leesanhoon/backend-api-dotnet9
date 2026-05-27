@@ -21,13 +21,14 @@ public static class ApplicationBuilderExtensions
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
-            app.UseSwaggerUI(options =>
-            {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "backend-api-dotnet9 v1");
-                options.RoutePrefix = "swagger";
-            });
+
             app.MapOpenApi();
         }
+        app.UseSwaggerUI(options =>
+           {
+               options.SwaggerEndpoint("/swagger/v1/swagger.json", "backend-api-dotnet9 v1");
+               options.RoutePrefix = "swagger";
+           });
 
         app.UseHttpsRedirection();
         app.UseCors(ServiceCollectionExtensions.ClientCorsPolicy);
