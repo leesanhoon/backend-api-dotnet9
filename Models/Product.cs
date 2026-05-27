@@ -9,4 +9,8 @@ public class Product
     public int StockQuantity { get; set; }
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
+    public List<ProductMaterial> ProductMaterials { get; set; } = [];
+    public List<ProductPrintOption> ProductPrintOptions { get; set; } = [];
+    public List<DesignFile> DesignFiles { get; set; } = [];
+    public List<OrderItem> OrderItems { get; set; } = [];
 }

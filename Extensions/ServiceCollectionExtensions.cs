@@ -31,6 +31,10 @@ public static class ServiceCollectionExtensions
         });
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<IMaterialService, MaterialService>();
+        services.AddScoped<IPrintTypeService, PrintTypeService>();
+        services.AddScoped<IProductConfigurationService, ProductConfigurationService>();
+        services.AddScoped<IOrderService, OrderService>();
 
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
