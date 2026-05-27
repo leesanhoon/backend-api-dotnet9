@@ -5,6 +5,7 @@ Backend API template using ASP.NET Core `.NET 9` for web/mobile clients.
 ## Features
 
 - Controller-based API (`Category`, `Product`)
+- Dependency Injection with service layer (`Controller -> Service -> DbContext`)
 - API versioning via URL segment (`/api/v1/...`) and header (`x-api-version`)
 - CORS configurable via `appsettings`
 - Swagger UI for API exploration
@@ -29,6 +30,11 @@ Default local URL is shown in terminal (usually `https://localhost:7xxx`).
 This project is configured with EF Core and PostgreSQL provider.
 
 - DbContext: `Data/AppDbContext.cs`
+- Services:
+  - `Services/Interfaces/ICategoryService.cs`
+  - `Services/Interfaces/IProductService.cs`
+  - `Services/CategoryService.cs`
+  - `Services/ProductService.cs`
 - Category CRUD: `/api/v1/Categories`
 - Product CRUD: `/api/v1/Products`
 
