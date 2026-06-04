@@ -1,4 +1,4 @@
-using backend_api_dotnet9.Models;
+﻿using backend_api_dotnet9.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace backend_api_dotnet9.Data;
@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Material> Materials => Set<Material>();
     public DbSet<ProductMaterial> ProductMaterials => Set<ProductMaterial>();
     public DbSet<PrintType> PrintTypes => Set<PrintType>();
@@ -34,10 +35,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(x => x.Description).HasMaxLength(1000);
             entity.Property(x => x.Price).HasPrecision(18, 2);
             entity.Property(x => x.StockQuantity).HasDefaultValue(0);
+            entity.Property(x => x.AvatarImageUrl).HasColumnName("avatar_image_url").HasMaxLength(1000);
             entity.HasOne(x => x.Category)
                 .WithMany(x => x.Products)
                 .HasForeignKey(x => x.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProductImage>(entity =>
+        {
+            entity.ToTable("product_images");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ImageType).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(x => x.ImageUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.DisplayOrder).HasDefaultValue(0);
+            entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+            entity.HasOne(x => x.Product)
+                .WithMany(x => x.ProductImages)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Material>(entity =>
@@ -115,3 +131,5 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
     }
 }
+
+

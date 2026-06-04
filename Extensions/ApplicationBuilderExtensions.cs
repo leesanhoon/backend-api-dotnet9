@@ -1,4 +1,5 @@
-using backend_api_dotnet9.Data;
+﻿using backend_api_dotnet9.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend_api_dotnet9.Extensions;
 
@@ -15,7 +16,7 @@ public static class ApplicationBuilderExtensions
         using (var scope = app.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            dbContext.Database.EnsureCreated();
+            dbContext.Database.Migrate();
         }
 
         app.UseSwagger();

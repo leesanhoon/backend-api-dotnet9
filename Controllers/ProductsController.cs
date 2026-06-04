@@ -1,4 +1,4 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using backend_api_dotnet9.Models;
 using backend_api_dotnet9.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +25,8 @@ public class ProductsController(IProductService productService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> Create([FromBody] UpsertProductRequest request, CancellationToken cancellationToken)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ProductResponse>> Create([FromForm] CreateProductRequest request, CancellationToken cancellationToken)
     {
         var result = await productService.CreateAsync(
             request.Name,
@@ -33,6 +34,8 @@ public class ProductsController(IProductService productService) : ControllerBase
             request.Price,
             request.StockQuantity,
             request.CategoryId,
+            request.AvatarImage,
+            request.GalleryImages ?? [],
             cancellationToken);
 
         if (result.CategoryNotFound)
@@ -40,8 +43,12 @@ public class ProductsController(IProductService productService) : ControllerBase
             return BadRequest($"CategoryId {request.CategoryId} does not exist.");
         }
 
-        var product = result.Product!;
-        return CreatedAtAction(nameof(GetById), new { id = product.Id, version = "1" }, product);
+        if (!string.IsNullOrWhiteSpace(result.ImageError))
+        {
+            return BadRequest(result.ImageError);
+        }
+
+        return CreatedAtAction(nameof(GetById), new { id = result.ProductResponse!.Id, version = "1" }, result.ProductResponse);
     }
 
     [HttpPut("{id:int}")]
@@ -65,7 +72,7 @@ public class ProductsController(IProductService productService) : ControllerBase
         {
             return BadRequest($"CategoryId {request.CategoryId} does not exist.");
         }
-        
+
         return Ok(result.ProductResponse);
     }
 
@@ -81,4 +88,5 @@ public class ProductsController(IProductService productService) : ControllerBase
     }
 }
 
+public sealed record CreateProductRequest(string Name, string? Description, decimal Price, int StockQuantity, int CategoryId, IFormFile? AvatarImage, List<IFormFile>? GalleryImages);
 public sealed record UpsertProductRequest(string Name, string? Description, decimal Price, int StockQuantity, int CategoryId);

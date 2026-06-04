@@ -1,4 +1,4 @@
-using backend_api_dotnet9.Models;
+﻿using backend_api_dotnet9.Models;
 
 namespace backend_api_dotnet9.Services.Interfaces;
 
@@ -6,12 +6,14 @@ public interface IProductService
 {
     Task<IReadOnlyList<ProductResponse>> GetAllAsync(CancellationToken cancellationToken);
     Task<ProductResponse?> GetByIdAsync(int id, CancellationToken cancellationToken);
-    Task<CreateOrUpdateProductResult> CreateAsync(string name, string? description, decimal price, int stockQuantity, int categoryId, CancellationToken cancellationToken);
+    Task<CreateOrUpdateProductResult> CreateAsync(string name, string? description, decimal price, int stockQuantity, int categoryId, IFormFile? avatarImage, IReadOnlyList<IFormFile> galleryImages, CancellationToken cancellationToken);
     Task<CreateOrUpdateProductResult> UpdateAsync(int id, string name, string? description, decimal price, int stockQuantity, int categoryId, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken);
 }
 
-public sealed record ProductResponse(int Id, string Name, string? Description, decimal Price, int StockQuantity, int CategoryId, string CategoryName);
+public sealed record ProductResponse(int Id, string Name, string? Description, decimal Price, int StockQuantity, int CategoryId, string CategoryName, string? AvatarImageUrl, IReadOnlyList<ProductImageResponse> GalleryImages);
+
+public sealed record ProductImageResponse(int Id, string ImageUrl, string ImageType, int DisplayOrder, DateTime CreatedAtUtc);
 
 public sealed class CreateOrUpdateProductResult
 {
@@ -19,4 +21,5 @@ public sealed class CreateOrUpdateProductResult
     public ProductResponse? ProductResponse { get; init; }
     public bool CategoryNotFound { get; init; }
     public bool ProductNotFound { get; init; }
+    public string? ImageError { get; init; }
 }

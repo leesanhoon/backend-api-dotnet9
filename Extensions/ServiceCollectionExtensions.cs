@@ -1,9 +1,11 @@
-using Asp.Versioning;
+﻿using Asp.Versioning;
 using backend_api_dotnet9.Data;
 using backend_api_dotnet9.Infrastructure;
 using backend_api_dotnet9.Services;
 using backend_api_dotnet9.Services.Interfaces;
+using CloudinaryDotNet;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 
 namespace backend_api_dotnet9.Extensions;
@@ -19,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddControllers();
         services.AddProblemDetails();
         services.AddHealthChecks();
+        services.Configure<ImageProcessingOptions>(configuration.GetSection("ImageProcessing"));
         services.AddDbContext<AppDbContext>(options =>
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -29,8 +32,24 @@ public static class ServiceCollectionExtensions
 
             options.UseNpgsql(ConnectionStringHelper.NormalizePostgresConnectionString(connectionString));
         });
+
+        services.Configure<CloudinaryOptions>(configuration.GetSection("Cloudinary"));
+        services.AddSingleton(sp =>
+        {
+            var cloudinaryOptions = sp.GetRequiredService<IOptions<CloudinaryOptions>>().Value;
+            if (string.IsNullOrWhiteSpace(cloudinaryOptions.CloudName) || string.IsNullOrWhiteSpace(cloudinaryOptions.ApiKey) || string.IsNullOrWhiteSpace(cloudinaryOptions.ApiSecret))
+            {
+                throw new InvalidOperationException("Cloudinary settings are not configured.");
+            }
+
+            var account = new Account(cloudinaryOptions.CloudName, cloudinaryOptions.ApiKey, cloudinaryOptions.ApiSecret);
+            return new Cloudinary(account);
+        });
+
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<ICloudinaryImageService, CloudinaryImageService>();
+        services.AddScoped<IImagePreparationService, ImagePreparationService>();
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IPrintTypeService, PrintTypeService>();
         services.AddScoped<IProductConfigurationService, ProductConfigurationService>();
