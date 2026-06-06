@@ -46,11 +46,17 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
-        var deleted = await categoryService.DeleteAsync(id, cancellationToken);
-        if (!deleted)
+        var result = await categoryService.DeleteAsync(id, cancellationToken);
+        if (result.NotFound)
         {
             return NotFound();
         }
+
+        if (result.HasLinkedProducts)
+        {
+            return BadRequest("Không thể xoá danh mục, vui lòng xoá tất cả sản phẩm liên kết.");
+        }
+
         return NoContent();
     }
 }

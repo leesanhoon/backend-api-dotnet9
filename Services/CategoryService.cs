@@ -49,16 +49,22 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
         return category;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken)
+    public async Task<DeleteCategoryResult> DeleteAsync(int id, CancellationToken cancellationToken)
     {
         var category = await dbContext.Categories.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (category is null)
         {
-            return false;
+            return new DeleteCategoryResult { NotFound = true };
+        }
+
+        var hasLinkedProducts = await dbContext.Products.AnyAsync(x => x.CategoryId == id, cancellationToken);
+        if (hasLinkedProducts)
+        {
+            return new DeleteCategoryResult { HasLinkedProducts = true };
         }
 
         dbContext.Categories.Remove(category);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        return new DeleteCategoryResult { Deleted = true };
     }
 }
