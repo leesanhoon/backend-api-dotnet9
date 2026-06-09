@@ -7,13 +7,14 @@ namespace backend_api_dotnet9.Services;
 
 public class OrderService(AppDbContext dbContext) : IOrderService
 {
-    public async Task<IReadOnlyList<OrderSummaryResponse>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<PagedResult<OrderSummaryResponse>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await dbContext.Orders
-            .AsNoTracking()
-            .OrderByDescending(x => x.Id)
+        var query = dbContext.Orders.AsNoTracking().OrderByDescending(x => x.Id);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize)
             .Select(x => new OrderSummaryResponse(x.Id, x.CustomerName, x.TotalAmount, x.Status, x.CreatedAtUtc))
             .ToListAsync(cancellationToken);
+        return new PagedResult<OrderSummaryResponse>(items, totalCount, page, pageSize);
     }
 
     public async Task<OrderDetailResponse?> GetByIdAsync(int id, CancellationToken cancellationToken)
@@ -22,10 +23,6 @@ public class OrderService(AppDbContext dbContext) : IOrderService
             .AsNoTracking()
             .Include(x => x.Items)
             .ThenInclude(x => x.Product)
-            .Include(x => x.Items)
-            .ThenInclude(x => x.Material)
-            .Include(x => x.Items)
-            .ThenInclude(x => x.PrintType)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         if (order is null) return null;
@@ -42,10 +39,6 @@ public class OrderService(AppDbContext dbContext) : IOrderService
             order.Items.Select(x => new OrderItemResponse(
                 x.ProductId,
                 x.Product != null ? x.Product.Name : string.Empty,
-                x.MaterialId,
-                x.Material != null ? x.Material.Name : null,
-                x.PrintTypeId,
-                x.PrintType != null ? x.PrintType.Name : null,
                 x.Quantity,
                 x.UnitPrice)).ToList());
     }
@@ -74,29 +67,9 @@ public class OrderService(AppDbContext dbContext) : IOrderService
                 return new CreateOrderResult { Error = $"ProductId {item.ProductId} not found." };
             }
 
-            if (item.MaterialId.HasValue)
-            {
-                var materialExists = await dbContext.Materials.AnyAsync(x => x.Id == item.MaterialId.Value, cancellationToken);
-                if (!materialExists)
-                {
-                    return new CreateOrderResult { Error = $"MaterialId {item.MaterialId.Value} not found." };
-                }
-            }
-
-            if (item.PrintTypeId.HasValue)
-            {
-                var printTypeExists = await dbContext.PrintTypes.AnyAsync(x => x.Id == item.PrintTypeId.Value, cancellationToken);
-                if (!printTypeExists)
-                {
-                    return new CreateOrderResult { Error = $"PrintTypeId {item.PrintTypeId.Value} not found." };
-                }
-            }
-
             order.Items.Add(new OrderItem
             {
                 ProductId = item.ProductId,
-                MaterialId = item.MaterialId,
-                PrintTypeId = item.PrintTypeId,
                 Quantity = item.Quantity,
                 UnitPrice = item.UnitPrice
             });
@@ -106,5 +79,42 @@ public class OrderService(AppDbContext dbContext) : IOrderService
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
         return new CreateOrderResult { Data = order };
+    }
+
+    private static readonly Dictionary<string, HashSet<string>> ValidTransitions = new()
+    {
+        ["draft"] = ["confirmed", "cancelled"],
+        ["confirmed"] = ["shipping"],
+        ["shipping"] = ["completed"],
+    };
+
+    public async Task<UpdateOrderStatusResult> UpdateStatusAsync(int id, string newStatus, CancellationToken cancellationToken)
+    {
+        var order = await dbContext.Orders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (order is null) return new UpdateOrderStatusResult { NotFound = true };
+
+        if (!ValidTransitions.TryGetValue(order.Status, out var allowed) || !allowed.Contains(newStatus))
+        {
+            return new UpdateOrderStatusResult { Error = $"Cannot transition from '{order.Status}' to '{newStatus}'." };
+        }
+
+        order.Status = newStatus;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new UpdateOrderStatusResult { NewStatus = newStatus };
+    }
+
+    public async Task<DeleteOrderResult> DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        var order = await dbContext.Orders.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (order is null) return new DeleteOrderResult { NotFound = true };
+
+        if (order.Status != "draft")
+        {
+            return new DeleteOrderResult { Error = "Only draft orders can be deleted." };
+        }
+
+        dbContext.Orders.Remove(order);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new DeleteOrderResult { Deleted = true };
     }
 }

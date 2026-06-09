@@ -4,7 +4,7 @@ namespace backend_api_dotnet9.Services.Interfaces;
 
 public interface ICategoryService
 {
-    Task<IReadOnlyList<Category>> GetAllAsync(CancellationToken cancellationToken);
+    Task<PagedResult<Category>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken);
     Task<Category?> GetByIdAsync(int id, CancellationToken cancellationToken);
     Task<Category> CreateAsync(string name, string? description, CancellationToken cancellationToken);
     Task<Category?> UpdateAsync(int id, string name, string? description, CancellationToken cancellationToken);

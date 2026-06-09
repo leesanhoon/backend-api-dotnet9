@@ -7,16 +7,12 @@ namespace backend_api_dotnet9.Services;
 
 public class ProductService(AppDbContext dbContext, ICloudinaryImageService cloudinaryImageService) : IProductService
 {
-    public async Task<IReadOnlyList<ProductResponse>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<PagedResult<ProductResponse>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
     {
-        var products = await dbContext.Products
-            .AsNoTracking()
-            .Include(x => x.Category)
-            .Include(x => x.ProductImages)
-            .OrderByDescending(x => x.Id)
-            .ToListAsync(cancellationToken);
-
-        return products.Select(MapToResponse).ToList();
+        var query = dbContext.Products.AsNoTracking().Include(x => x.Category).Include(x => x.ProductImages).OrderByDescending(x => x.Id);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var products = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return new PagedResult<ProductResponse>(products.Select(MapToResponse).ToList(), totalCount, page, pageSize);
     }
 
     public async Task<ProductResponse?> GetByIdAsync(int id, CancellationToken cancellationToken)

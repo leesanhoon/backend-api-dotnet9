@@ -11,10 +11,10 @@ namespace backend_api_dotnet9.Controllers;
 public class MaterialsController(IMaterialService materialService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Material>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<Material>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var items = await materialService.GetAllAsync(cancellationToken);
-        return Ok(items);
+        var result = await materialService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpPost]

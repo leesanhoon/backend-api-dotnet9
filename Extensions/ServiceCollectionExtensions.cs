@@ -52,7 +52,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IImagePreparationService, ImagePreparationService>();
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IPrintTypeService, PrintTypeService>();
-        services.AddScoped<IProductConfigurationService, ProductConfigurationService>();
         services.AddScoped<IOrderService, OrderService>();
 
         services.AddEndpointsApiExplorer();

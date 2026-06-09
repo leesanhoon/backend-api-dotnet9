@@ -11,10 +11,10 @@ namespace backend_api_dotnet9.Controllers;
 public class PrintTypesController(IPrintTypeService printTypeService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<PrintType>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<PrintType>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var items = await printTypeService.GetAllAsync(cancellationToken);
-        return Ok(items);
+        var result = await printTypeService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpPost]

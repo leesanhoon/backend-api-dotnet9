@@ -11,10 +11,10 @@ namespace backend_api_dotnet9.Controllers;
 public class ProductsController(IProductService productService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ProductResponse>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<ProductResponse>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var products = await productService.GetAllAsync(cancellationToken);
-        return Ok(products);
+        var result = await productService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]

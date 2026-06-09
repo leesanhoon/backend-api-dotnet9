@@ -11,10 +11,10 @@ namespace backend_api_dotnet9.Controllers;
 public class OrdersController(IOrderService orderService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<OrderSummaryResponse>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<OrderSummaryResponse>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var orders = await orderService.GetAllAsync(cancellationToken);
-        return Ok(orders);
+        var result = await orderService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]
@@ -33,4 +33,24 @@ public class OrdersController(IOrderService orderService) : ControllerBase
         var order = result.Data!;
         return CreatedAtAction(nameof(GetById), new { id = order.Id, version = "1" }, order);
     }
+
+    [HttpPut("{id:int}/status")]
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusRequest request, CancellationToken cancellationToken)
+    {
+        var result = await orderService.UpdateStatusAsync(id, request.Status, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!string.IsNullOrWhiteSpace(result.Error)) return BadRequest(result.Error);
+        return Ok(new { status = result.NewStatus });
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        var result = await orderService.DeleteAsync(id, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!string.IsNullOrWhiteSpace(result.Error)) return BadRequest(result.Error);
+        return NoContent();
+    }
 }
+
+public sealed record UpdateOrderStatusRequest(string Status);

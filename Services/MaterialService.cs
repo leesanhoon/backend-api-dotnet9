@@ -7,12 +7,12 @@ namespace backend_api_dotnet9.Services;
 
 public class MaterialService(AppDbContext dbContext) : IMaterialService
 {
-    public async Task<IReadOnlyList<Material>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<PagedResult<Material>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken)
     {
-        return await dbContext.Materials
-            .AsNoTracking()
-            .OrderBy(x => x.Name)
-            .ToListAsync(cancellationToken);
+        var query = dbContext.Materials.AsNoTracking().OrderBy(x => x.Name);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return new PagedResult<Material>(items, totalCount, page, pageSize);
     }
 
     public async Task<Material> CreateAsync(string name, string? description, CancellationToken cancellationToken)

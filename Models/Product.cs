@@ -11,8 +11,5 @@ public class Product
     public string? AvatarImageUrl { get; set; }
     public Category? Category { get; set; }
     public List<ProductImage> ProductImages { get; set; } = [];
-    public List<ProductMaterial> ProductMaterials { get; set; } = [];
-    public List<ProductPrintOption> ProductPrintOptions { get; set; } = [];
-    public List<DesignFile> DesignFiles { get; set; } = [];
     public List<OrderItem> OrderItems { get; set; } = [];
 }

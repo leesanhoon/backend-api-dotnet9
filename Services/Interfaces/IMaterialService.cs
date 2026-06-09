@@ -4,6 +4,6 @@ namespace backend_api_dotnet9.Services.Interfaces;
 
 public interface IMaterialService
 {
-    Task<IReadOnlyList<Material>> GetAllAsync(CancellationToken cancellationToken);
+    Task<PagedResult<Material>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken);
     Task<Material> CreateAsync(string name, string? description, CancellationToken cancellationToken);
 }

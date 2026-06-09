@@ -11,10 +11,10 @@ namespace backend_api_dotnet9.Controllers;
 public class CategoriesController(ICategoryService categoryService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Category>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<Category>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var categories = await categoryService.GetAllAsync(cancellationToken);
-        return Ok(categories);
+        var result = await categoryService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("{id:int}")]

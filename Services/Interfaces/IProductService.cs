@@ -4,7 +4,7 @@ namespace backend_api_dotnet9.Services.Interfaces;
 
 public interface IProductService
 {
-    Task<IReadOnlyList<ProductResponse>> GetAllAsync(CancellationToken cancellationToken);
+    Task<PagedResult<ProductResponse>> GetAllAsync(int page, int pageSize, CancellationToken cancellationToken);
     Task<ProductResponse?> GetByIdAsync(int id, CancellationToken cancellationToken);
     Task<CreateOrUpdateProductResult> CreateAsync(string name, string? description, decimal price, int stockQuantity, int categoryId, IFormFile? avatarImage, IReadOnlyList<IFormFile> galleryImages, CancellationToken cancellationToken);
     Task<CreateOrUpdateProductResult> UpdateAsync(int id, string name, string? description, decimal price, int stockQuantity, int categoryId, CancellationToken cancellationToken);
