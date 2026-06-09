@@ -8,8 +8,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
-    public DbSet<Material> Materials => Set<Material>();
-    public DbSet<PrintType> PrintTypes => Set<PrintType>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
 
@@ -51,24 +49,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(x => x.ProductImages)
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<Material>(entity =>
-        {
-            entity.ToTable("materials");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
-            entity.Property(x => x.Description).HasMaxLength(500);
-            entity.HasIndex(x => x.Name).IsUnique();
-        });
-
-        modelBuilder.Entity<PrintType>(entity =>
-        {
-            entity.ToTable("print_types");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
-            entity.Property(x => x.Description).HasMaxLength(500);
-            entity.HasIndex(x => x.Name).IsUnique();
         });
 
         modelBuilder.Entity<Order>(entity =>
