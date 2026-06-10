@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using backend_api_dotnet9.Models;
 using backend_api_dotnet9.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +13,7 @@ public class ProductsController(IProductService productService) : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResult<ProductResponse>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var result = await productService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        var result = await productService.GetAllAsync(pagination.SafePage, pagination.SafePageSize, cancellationToken);
         return Ok(result);
     }
 
@@ -28,50 +28,41 @@ public class ProductsController(IProductService productService) : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ProductResponse>> Create([FromForm] CreateProductRequest request, CancellationToken cancellationToken)
     {
-        var result = await productService.CreateAsync(
+        var command = new CreateProductCommand(
             request.Name,
             request.Description,
-            request.Price,
-            request.StockQuantity,
             request.CategoryId,
             request.AvatarImage,
-            request.GalleryImages ?? [],
-            cancellationToken);
+            request.GalleryImages,
+            request.Variants,
+            request.LidIds ?? []);
 
-        if (result.CategoryNotFound)
-        {
-            return BadRequest($"CategoryId {request.CategoryId} does not exist.");
-        }
+        var result = await productService.CreateAsync(command, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(result.ImageError))
-        {
-            return BadRequest(result.ImageError);
-        }
+        if (result.CategoryNotFound) return BadRequest($"CategoryId {request.CategoryId} không tồn tại.");
+        if (result.ValidationError is not null) return BadRequest(result.ValidationError);
+        if (result.ImageError is not null) return BadRequest(result.ImageError);
 
         return CreatedAtAction(nameof(GetById), new { id = result.ProductResponse!.Id, version = "1" }, result.ProductResponse);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<ProductResponse>> Update(int id, [FromBody] UpsertProductRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProductResponse>> Update(int id, [FromBody] UpdateProductRequest request, CancellationToken cancellationToken)
     {
-        var result = await productService.UpdateAsync(
-            id,
+        var command = new CreateProductCommand(
             request.Name,
             request.Description,
-            request.Price,
-            request.StockQuantity,
             request.CategoryId,
-            cancellationToken);
+            null,
+            null,
+            request.Variants,
+            request.LidIds ?? []);
 
-        if (result.ProductNotFound)
-        {
-            return NotFound();
-        }
+        var result = await productService.UpdateAsync(id, command, cancellationToken);
 
-        if (result.CategoryNotFound)
-        {
-            return BadRequest($"CategoryId {request.CategoryId} does not exist.");
-        }
+        if (result.ProductNotFound) return NotFound();
+        if (result.CategoryNotFound) return BadRequest($"CategoryId {request.CategoryId} không tồn tại.");
+        if (result.ValidationError is not null) return BadRequest(result.ValidationError);
 
         return Ok(result.ProductResponse);
     }
@@ -80,13 +71,29 @@ public class ProductsController(IProductService productService) : ControllerBase
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var deleted = await productService.DeleteAsync(id, cancellationToken);
-        if (!deleted)
-        {
-            return NotFound();
-        }
-        return NoContent();
+        return deleted ? NoContent() : NotFound();
+    }
+
+    [HttpGet("{id:int}/compatible-lids")]
+    public async Task<ActionResult<IReadOnlyList<LidResponse>>> GetCompatibleLids(int id, CancellationToken cancellationToken)
+    {
+        var lids = await productService.GetCompatibleLidsAsync(id, cancellationToken);
+        return Ok(lids);
     }
 }
 
-public sealed record CreateProductRequest(string Name, string? Description, decimal Price, int StockQuantity, int CategoryId, IFormFile? AvatarImage, List<IFormFile>? GalleryImages);
-public sealed record UpsertProductRequest(string Name, string? Description, decimal Price, int StockQuantity, int CategoryId);
+public sealed record CreateProductRequest(
+    string Name,
+    string? Description,
+    int CategoryId,
+    IFormFile? AvatarImage,
+    List<IFormFile>? GalleryImages,
+    List<ProductVariantItem> Variants,
+    List<int>? LidIds);
+
+public sealed record UpdateProductRequest(
+    string Name,
+    string? Description,
+    int CategoryId,
+    List<ProductVariantItem> Variants,
+    List<int>? LidIds);

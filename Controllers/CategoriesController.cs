@@ -13,8 +13,15 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     [HttpGet]
     public async Task<ActionResult<PagedResult<Category>>> GetAll([FromQuery] PaginationRequest pagination, CancellationToken cancellationToken)
     {
-        var result = await categoryService.GetAllAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        var result = await categoryService.GetAllAsync(pagination.SafePage, pagination.SafePageSize, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("tree")]
+    public async Task<ActionResult<IReadOnlyList<CategoryTreeNode>>> GetTree(CancellationToken cancellationToken)
+    {
+        var tree = await categoryService.GetTreeAsync(cancellationToken);
+        return Ok(tree);
     }
 
     [HttpGet("{id:int}")]
@@ -27,38 +34,40 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     [HttpPost]
     public async Task<ActionResult<Category>> Create([FromBody] UpsertCategoryRequest request, CancellationToken cancellationToken)
     {
-        var category = await categoryService.CreateAsync(request.Name, request.Description, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id = category.Id, version = "1" }, category);
+        var result = await categoryService.CreateAsync(request.Name, request.Description, request.ParentId, cancellationToken);
+
+        if (result.ParentNotFound)
+            return BadRequest("ParentId không tồn tại.");
+
+        return CreatedAtAction(nameof(GetById), new { id = result.Category!.Id, version = "1" }, result.Category);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<Category>> Update(int id, [FromBody] UpsertCategoryRequest request, CancellationToken cancellationToken)
     {
-        var category = await categoryService.UpdateAsync(id, request.Name, request.Description, cancellationToken);
-        if (category is null)
-        {
-            return NotFound();
-        }
+        var result = await categoryService.UpdateAsync(id, request.Name, request.Description, request.ParentId, cancellationToken);
 
-        return Ok(category);
+        if (result.CategoryNotFound) return NotFound();
+        if (result.IsRootProtected) return BadRequest("Không thể sửa danh mục gốc.");
+        if (result.ParentNotFound) return BadRequest("ParentId không tồn tại.");
+        if (result.WouldCreateCycle) return BadRequest("Không thể chọn danh mục con làm cha (tránh vòng lặp).");
+
+        return Ok(result.Category);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         var result = await categoryService.DeleteAsync(id, cancellationToken);
-        if (result.NotFound)
-        {
-            return NotFound();
-        }
 
-        if (result.HasLinkedProducts)
-        {
-            return BadRequest("Không thể xoá danh mục, vui lòng xoá tất cả sản phẩm liên kết.");
-        }
+        if (result.NotFound) return NotFound();
+        if (result.IsRootProtected) return BadRequest("Không thể xoá danh mục gốc.");
+        if (result.HasChildren) return BadRequest("Không thể xoá danh mục đang có danh mục con.");
+        if (result.HasLinkedProducts) return BadRequest("Không thể xoá danh mục đang có sản phẩm.");
+        if (result.HasLinkedLids) return BadRequest("Không thể xoá danh mục đang có nắp ly.");
 
         return NoContent();
     }
 }
 
-public sealed record UpsertCategoryRequest(string Name, string? Description);
+public sealed record UpsertCategoryRequest(string Name, string? Description, int? ParentId);
