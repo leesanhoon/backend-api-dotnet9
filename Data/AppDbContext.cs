@@ -15,6 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProductLid> ProductLids => Set<ProductLid>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<Partner> Partners => Set<Partner>();
+    public DbSet<PartnerImage> PartnerImages => Set<PartnerImage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,6 +152,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Partner>(entity =>
+        {
+            entity.ToTable("partners");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Address).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.PhoneNumber).HasMaxLength(20);
+            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.AvatarImageUrl).HasColumnName("avatar_image_url").HasMaxLength(1000);
+            entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+            entity.HasIndex(x => x.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<PartnerImage>(entity =>
+        {
+            entity.ToTable("partner_images");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ImageType).HasConversion<string>().HasMaxLength(20).IsRequired();
+            entity.Property(x => x.ImageUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.DisplayOrder).HasDefaultValue(0);
+            entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
+            entity.HasOne(x => x.Partner)
+                .WithMany(x => x.PartnerImages)
+                .HasForeignKey(x => x.PartnerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

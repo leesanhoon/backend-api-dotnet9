@@ -50,6 +50,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<ILidService, LidService>();
         services.AddScoped<IOrderService, OrderService>();
+        services.AddScoped<IPartnerService, PartnerService>();
         services.AddScoped<ICloudinaryImageService, CloudinaryImageService>();
         services.AddScoped<IImagePreparationService, ImagePreparationService>();
 
