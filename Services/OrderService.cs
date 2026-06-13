@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace backend_api_dotnet9.Services;
 
-public class OrderService(AppDbContext dbContext) : IOrderService
+public class OrderService(AppDbContext dbContext, ITelegramNotificationService telegramNotification) : IOrderService
 {
     private static readonly Dictionary<OrderStatus, OrderStatus[]> AllowedTransitions = new()
     {
@@ -45,7 +45,9 @@ public class OrderService(AppDbContext dbContext) : IOrderService
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return await LoadOrderDetailAsync(order.Id, cancellationToken);
+        var detail = await LoadOrderDetailAsync(order.Id, cancellationToken);
+        telegramNotification.SendOrderCreatedNotification(detail);
+        return detail;
     }
 
     public async Task<OrderDetailDto?> TrackAsync(int orderId, string phone, CancellationToken cancellationToken)

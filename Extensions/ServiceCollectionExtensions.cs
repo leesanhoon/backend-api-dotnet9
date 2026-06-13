@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
         });
 
         services.Configure<CloudinaryOptions>(configuration.GetSection("Cloudinary"));
+        services.Configure<TelegramOptions>(configuration.GetSection("Telegram"));
+        services.AddHttpClient("Telegram");
         services.AddSingleton(sp =>
         {
             var cloudinaryOptions = sp.GetRequiredService<IOptions<CloudinaryOptions>>().Value;
@@ -51,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILidService, LidService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IPartnerService, PartnerService>();
+        services.AddScoped<ITelegramNotificationService, TelegramNotificationService>();
         services.AddScoped<ICloudinaryImageService, CloudinaryImageService>();
         services.AddScoped<IImagePreparationService, ImagePreparationService>();
 
