@@ -9,3 +9,5 @@ var app = builder.Build();
 app.UseApplicationPipeline();
 
 app.Run();
+
+public partial class Program;
