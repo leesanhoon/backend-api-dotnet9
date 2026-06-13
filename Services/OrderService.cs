@@ -9,7 +9,7 @@ public class OrderService(AppDbContext dbContext, ITelegramNotificationService t
 {
     private static readonly Dictionary<OrderStatus, OrderStatus[]> AllowedTransitions = new()
     {
-        [OrderStatus.Draft] = [OrderStatus.Confirmed, OrderStatus.Cancelled],
+        [OrderStatus.PendingConfirmation] = [OrderStatus.Confirmed, OrderStatus.Cancelled],
         [OrderStatus.Confirmed] = [OrderStatus.Shipping],
         [OrderStatus.Shipping] = [OrderStatus.Completed],
         [OrderStatus.Completed] = [],
@@ -24,7 +24,7 @@ public class OrderService(AppDbContext dbContext, ITelegramNotificationService t
             CustomerPhone = request.CustomerPhone.Trim(),
             CustomerEmail = request.CustomerEmail?.Trim(),
             Note = request.Note?.Trim(),
-            Status = OrderStatus.Draft,
+            Status = OrderStatus.PendingConfirmation,
             CreatedAtUtc = DateTime.UtcNow
         };
 

@@ -2,7 +2,7 @@ namespace backend_api_dotnet9.Models;
 
 public enum OrderStatus
 {
-    Draft,
+    PendingConfirmation,
     Confirmed,
     Shipping,
     Completed,
@@ -17,7 +17,7 @@ public class Order
     public string? CustomerEmail { get; set; }
     public string? Note { get; set; }
     public decimal TotalAmount { get; set; }
-    public OrderStatus Status { get; set; } = OrderStatus.Draft;
+    public OrderStatus Status { get; set; } = OrderStatus.PendingConfirmation;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public List<OrderItem> Items { get; set; } = [];
 }
