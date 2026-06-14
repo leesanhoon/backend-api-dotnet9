@@ -18,7 +18,6 @@ public static class ApplicationBuilderExtensions
             using var scope = app.Services.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             dbContext.Database.Migrate();
-            AppDbSeeder.SeedSampleDataAsync(dbContext).GetAwaiter().GetResult();
         }
 
         app.UseSwagger();
