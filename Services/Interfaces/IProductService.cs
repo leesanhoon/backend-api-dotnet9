@@ -10,6 +10,8 @@ public interface IProductService
     Task<CreateOrUpdateProductResult> UpdateAsync(int id, CreateProductCommand command, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken);
     Task<IReadOnlyList<LidResponse>> GetCompatibleLidsAsync(int productId, CancellationToken cancellationToken);
+    Task<AddImagesResult> AddImagesAsync(int productId, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken);
+    Task<DeleteImageResult> DeleteImageAsync(int productId, int imageId, CancellationToken cancellationToken);
 }
 
 public sealed record CreateProductCommand(
@@ -52,4 +54,18 @@ public sealed class CreateOrUpdateProductResult
     public bool ProductNotFound { get; init; }
     public string? ImageError { get; init; }
     public string? ValidationError { get; init; }
+}
+
+public sealed class AddImagesResult
+{
+    public ProductResponse? ProductResponse { get; init; }
+    public bool ProductNotFound { get; init; }
+    public string? ImageError { get; init; }
+}
+
+public sealed class DeleteImageResult
+{
+    public bool Deleted { get; init; }
+    public bool ProductNotFound { get; init; }
+    public bool ImageNotFound { get; init; }
 }

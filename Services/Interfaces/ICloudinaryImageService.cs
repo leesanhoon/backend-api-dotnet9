@@ -2,5 +2,5 @@
 
 public interface ICloudinaryImageService
 {
-    Task<string> UploadImageAsync(IFormFile file, bool isAvatar, CancellationToken cancellationToken);
+    Task<string> UploadImageAsync(IFormFile file, bool isAvatar, CancellationToken cancellationToken, string? folder = null);
 }

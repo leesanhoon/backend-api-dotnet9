@@ -175,6 +175,7 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
         var lids = await dbContext.Lids.AsNoTracking()
             .Include(l => l.Category)
             .Include(l => l.Prices)
+            .Include(l => l.LidImages)
             .Where(l => l.Prices.Any(p => diameters.Contains(p.DiameterMm)))
             .ToListAsync(cancellationToken);
 
@@ -184,19 +185,76 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             l.Description,
             l.CategoryId,
             l.Category?.Name ?? string.Empty,
+            l.AvatarImageUrl,
+            l.LidImages.Where(x => x.ImageType == LidImageType.Gallery)
+                .OrderBy(x => x.DisplayOrder)
+                .Select(x => new LidImageResponse(x.Id, x.ImageUrl, x.ImageType.ToString().ToLowerInvariant(), x.DisplayOrder, x.CreatedAtUtc))
+                .ToList(),
             l.Prices.OrderBy(p => p.DiameterMm)
                 .Select(p => new LidPriceResponse(p.Id, p.DiameterMm, p.SizeName, p.UnitPrice))
                 .ToList()
         )).ToList();
     }
 
+    public async Task<AddImagesResult> AddImagesAsync(int productId, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken)
+    {
+        var product = await dbContext.Products
+            .Include(x => x.ProductImages)
+            .FirstOrDefaultAsync(x => x.Id == productId, cancellationToken);
+
+        if (product is null)
+            return new AddImagesResult { ProductNotFound = true };
+
+        try
+        {
+            await UploadImagesAsync(product, avatarImage, galleryImages, cancellationToken);
+        }
+        catch (ArgumentException ex)
+        {
+            return new AddImagesResult { ImageError = ex.Message };
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new AddImagesResult { ImageError = ex.Message };
+        }
+
+        var response = await LoadProductResponseAsync(productId, cancellationToken);
+        return new AddImagesResult { ProductResponse = response };
+    }
+
+    public async Task<DeleteImageResult> DeleteImageAsync(int productId, int imageId, CancellationToken cancellationToken)
+    {
+        var product = await dbContext.Products
+            .Include(x => x.ProductImages)
+            .FirstOrDefaultAsync(x => x.Id == productId, cancellationToken);
+
+        if (product is null)
+            return new DeleteImageResult { ProductNotFound = true };
+
+        var image = product.ProductImages.FirstOrDefault(x => x.Id == imageId);
+        if (image is null)
+            return new DeleteImageResult { ImageNotFound = true };
+
+        dbContext.ProductImages.Remove(image);
+
+        if (image.ImageType == ProductImageType.Avatar)
+            product.AvatarImageUrl = null;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return new DeleteImageResult { Deleted = true };
+    }
+
     private async Task UploadImagesAsync(Product product, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken)
     {
         var productImages = new List<ProductImage>();
-        var nextDisplayOrder = 1;
+        var nextDisplayOrder = (product.ProductImages?.Where(x => x.ImageType == ProductImageType.Gallery).Select(x => x.DisplayOrder).DefaultIfEmpty(0).Max() ?? 0) + 1;
 
         if (avatarImage is not null)
         {
+            var oldAvatar = product.ProductImages?.FirstOrDefault(x => x.ImageType == ProductImageType.Avatar);
+            if (oldAvatar is not null)
+                dbContext.ProductImages.Remove(oldAvatar);
+
             var avatarUrl = await cloudinaryImageService.UploadImageAsync(avatarImage, true, cancellationToken);
             product.AvatarImageUrl = avatarUrl;
             productImages.Add(new ProductImage

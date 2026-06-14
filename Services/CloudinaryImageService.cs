@@ -10,18 +10,19 @@ public sealed class CloudinaryImageService(Cloudinary cloudinary, IOptions<Cloud
 {
     private readonly string folder = string.IsNullOrWhiteSpace(options.Value.Folder) ? "products" : options.Value.Folder.Trim();
 
-    public async Task<string> UploadImageAsync(IFormFile file, bool isAvatar, CancellationToken cancellationToken)
+    public async Task<string> UploadImageAsync(IFormFile file, bool isAvatar, CancellationToken cancellationToken, string? folder = null)
     {
+        var targetFolder = string.IsNullOrWhiteSpace(folder) ? this.folder : folder;
         var prepared = await imagePreparationService.PrepareAsync(file, isAvatar, cancellationToken);
         await using var stream = prepared.Content;
         var uploadParams = new ImageUploadParams
         {
             File = new FileDescription(prepared.FileName, stream),
-            Folder = folder,
+            Folder = targetFolder,
             UseFilename = true,
             UniqueFilename = true,
             Overwrite = false,
-            AssetFolder = folder
+            AssetFolder = targetFolder
         };
 
         var uploadResult = await cloudinary.UploadAsync(uploadParams);

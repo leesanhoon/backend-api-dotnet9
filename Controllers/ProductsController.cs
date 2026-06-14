@@ -80,6 +80,29 @@ public class ProductsController(IProductService productService) : ControllerBase
         var lids = await productService.GetCompatibleLidsAsync(id, cancellationToken);
         return Ok(lids);
     }
+
+    [HttpPost("{id:int}/images")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ProductResponse>> AddImages(int id, [FromForm] AddProductImagesRequest request, CancellationToken cancellationToken)
+    {
+        var result = await productService.AddImagesAsync(id, request.AvatarImage, request.GalleryImages, cancellationToken);
+
+        if (result.ProductNotFound) return NotFound();
+        if (result.ImageError is not null) return BadRequest(result.ImageError);
+
+        return Ok(result.ProductResponse);
+    }
+
+    [HttpDelete("{id:int}/images/{imageId:int}")]
+    public async Task<IActionResult> DeleteImage(int id, int imageId, CancellationToken cancellationToken)
+    {
+        var result = await productService.DeleteImageAsync(id, imageId, cancellationToken);
+
+        if (result.ProductNotFound) return NotFound();
+        if (result.ImageNotFound) return NotFound("Image không tồn tại.");
+
+        return NoContent();
+    }
 }
 
 public sealed record CreateProductRequest(
@@ -97,3 +120,7 @@ public sealed record UpdateProductRequest(
     int CategoryId,
     List<ProductVariantItem> Variants,
     List<int>? LidIds);
+
+public sealed record AddProductImagesRequest(
+    IFormFile? AvatarImage,
+    List<IFormFile>? GalleryImages);

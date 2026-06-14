@@ -25,12 +25,22 @@ public class LidsController(ILidService lidService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<LidResponse>> Create([FromBody] CreateLidRequest request, CancellationToken cancellationToken)
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<LidResponse>> Create([FromForm] CreateLidFormRequest request, CancellationToken cancellationToken)
     {
-        var result = await lidService.CreateAsync(request, cancellationToken);
+        var command = new CreateLidCommand(
+            request.Name,
+            request.Description,
+            request.CategoryId,
+            request.AvatarImage,
+            request.GalleryImages,
+            request.Prices);
+
+        var result = await lidService.CreateAsync(command, cancellationToken);
 
         if (result.CategoryNotFound) return BadRequest("CategoryId không tồn tại.");
         if (result.ValidationError is not null) return BadRequest(result.ValidationError);
+        if (result.ImageError is not null) return BadRequest(result.ImageError);
 
         return CreatedAtAction(nameof(GetById), new { id = result.LidResponse!.Id, version = "1" }, result.LidResponse);
     }
@@ -57,4 +67,39 @@ public class LidsController(ILidService lidService) : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPost("{id:int}/images")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<LidResponse>> AddImages(int id, [FromForm] AddLidImagesRequest request, CancellationToken cancellationToken)
+    {
+        var result = await lidService.AddImagesAsync(id, request.AvatarImage, request.GalleryImages, cancellationToken);
+
+        if (result.LidNotFound) return NotFound();
+        if (result.ImageError is not null) return BadRequest(result.ImageError);
+
+        return Ok(result.LidResponse);
+    }
+
+    [HttpDelete("{id:int}/images/{imageId:int}")]
+    public async Task<IActionResult> DeleteImage(int id, int imageId, CancellationToken cancellationToken)
+    {
+        var result = await lidService.DeleteImageAsync(id, imageId, cancellationToken);
+
+        if (result.LidNotFound) return NotFound();
+        if (result.ImageNotFound) return NotFound("Image không tồn tại.");
+
+        return NoContent();
+    }
 }
+
+public sealed record CreateLidFormRequest(
+    string Name,
+    string? Description,
+    int CategoryId,
+    IFormFile? AvatarImage,
+    List<IFormFile>? GalleryImages,
+    List<LidPriceItem> Prices);
+
+public sealed record AddLidImagesRequest(
+    IFormFile? AvatarImage,
+    List<IFormFile>? GalleryImages);
