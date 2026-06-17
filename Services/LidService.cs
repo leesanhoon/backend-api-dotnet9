@@ -188,6 +188,9 @@ public class LidService(AppDbContext dbContext, ICloudinaryImageService cloudina
 
     private async Task UploadImagesAsync(Lid lid, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken)
     {
+        if (galleryImages is not null && galleryImages.Count > 10)
+            throw new ArgumentException("Tối đa 10 ảnh gallery cho mỗi lần upload.");
+
         var lidImages = new List<LidImage>();
         var nextDisplayOrder = (lid.LidImages?.Where(x => x.ImageType == LidImageType.Gallery).Select(x => x.DisplayOrder).DefaultIfEmpty(0).Max() ?? 0) + 1;
 

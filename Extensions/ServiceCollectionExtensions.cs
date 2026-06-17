@@ -20,6 +20,10 @@ public static class ServiceCollectionExtensions
 
         services.AddControllers();
         services.AddProblemDetails();
+        services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+        {
+            options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50 MB total
+        });
         services.AddHealthChecks();
         services.Configure<ImageProcessingOptions>(configuration.GetSection("ImageProcessing"));
         services.AddDbContext<AppDbContext>(options =>

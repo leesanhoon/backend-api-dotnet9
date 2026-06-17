@@ -139,12 +139,15 @@ public class PartnerService(AppDbContext dbContext, ICloudinaryImageService clou
 
     private async Task UploadImagesAsync(Partner partner, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken)
     {
+        if (galleryImages is not null && galleryImages.Count > 10)
+            throw new ArgumentException("Tối đa 10 ảnh gallery cho mỗi lần upload.");
+
         var partnerImages = new List<PartnerImage>();
         var nextDisplayOrder = 1;
 
         if (avatarImage is not null)
         {
-            var avatarUrl = await cloudinaryImageService.UploadImageAsync(avatarImage, true, cancellationToken);
+            var avatarUrl = await cloudinaryImageService.UploadImageAsync(avatarImage, true, cancellationToken, "partners");
             partner.AvatarImageUrl = avatarUrl;
             partnerImages.Add(new PartnerImage
             {
@@ -159,7 +162,7 @@ public class PartnerService(AppDbContext dbContext, ICloudinaryImageService clou
         {
             foreach (var galleryImage in galleryImages)
             {
-                var galleryUrl = await cloudinaryImageService.UploadImageAsync(galleryImage, false, cancellationToken);
+                var galleryUrl = await cloudinaryImageService.UploadImageAsync(galleryImage, false, cancellationToken, "partners");
                 partnerImages.Add(new PartnerImage
                 {
                     PartnerId = partner.Id,

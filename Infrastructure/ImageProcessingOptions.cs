@@ -7,4 +7,6 @@ public sealed class ImageProcessingOptions
     public int GalleryMaxWidth { get; set; } = 1000;
     public int GalleryMaxHeight { get; set; } = 1000;
     public long JpegQuality { get; set; } = 82;
+    public long MaxFileSizeBytes { get; set; } = 10 * 1024 * 1024; // 10 MB
+    public int MaxGalleryImages { get; set; } = 10;
 }

@@ -7,6 +7,7 @@ namespace backend_api_dotnet9.Services.Interfaces;
 public interface IImagePreparationService
 {
     Task<PreparedImage> PrepareAsync(IFormFile file, bool isAvatar, CancellationToken cancellationToken);
+    void ValidateGalleryCount(List<IFormFile>? galleryImages);
 }
 
 public sealed record PreparedImage(Stream Content, string FileName, string ContentType, long Length, string Extension);

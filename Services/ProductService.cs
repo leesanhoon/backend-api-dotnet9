@@ -246,6 +246,9 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
 
     private async Task UploadImagesAsync(Product product, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken)
     {
+        if (galleryImages is not null && galleryImages.Count > 10)
+            throw new ArgumentException("Tối đa 10 ảnh gallery cho mỗi lần upload.");
+
         var productImages = new List<ProductImage>();
         var nextDisplayOrder = (product.ProductImages?.Where(x => x.ImageType == ProductImageType.Gallery).Select(x => x.DisplayOrder).DefaultIfEmpty(0).Max() ?? 0) + 1;
 
