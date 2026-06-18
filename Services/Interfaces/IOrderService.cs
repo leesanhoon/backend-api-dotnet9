@@ -22,7 +22,8 @@ public sealed record CreateOrderItemRequest(
     int Quantity,
     decimal UnitPrice,
     int? MaterialId,
-    int? PrintTypeId);
+    int? PrintTypeId,
+    int? LidId);
 
 public sealed record UpdateOrderStatusRequest(string Status);
 
@@ -44,6 +45,8 @@ public sealed record OrderItemDto(
     string? MaterialName,
     int? PrintTypeId,
     string? PrintTypeName,
+    int? LidId,
+    string? LidName,
     int Quantity,
     decimal UnitPrice);
 

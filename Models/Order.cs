@@ -31,6 +31,8 @@ public class OrderItem
     public decimal UnitPrice { get; set; }
     public int? MaterialId { get; set; }
     public int? PrintTypeId { get; set; }
+    public int? LidId { get; set; }
     public Order? Order { get; set; }
     public Product? Product { get; set; }
+    public Lid? Lid { get; set; }
 }

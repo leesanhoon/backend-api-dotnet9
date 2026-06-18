@@ -168,6 +168,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Lid)
+                .WithMany()
+                .HasForeignKey(x => x.LidId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Partner>(entity =>
