@@ -34,5 +34,5 @@ public class OrderItem
     public int? LidId { get; set; }
     public Order? Order { get; set; }
     public Product? Product { get; set; }
-    public Lid? Lid { get; set; }
+    public Product? LidProduct { get; set; }
 }

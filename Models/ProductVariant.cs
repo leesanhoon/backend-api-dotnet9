@@ -7,5 +7,6 @@ public class ProductVariant
     public Product? Product { get; set; }
     public int CapacityMl { get; set; }
     public int DiameterMm { get; set; }
+    public string? SizeName { get; set; }
     public List<VariantPriceTier> PriceTiers { get; set; } = [];
 }

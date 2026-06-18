@@ -54,7 +54,6 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IProductService, ProductService>();
-        services.AddScoped<ILidService, LidService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IPartnerService, PartnerService>();
         services.AddScoped<ITelegramNotificationService, TelegramNotificationService>();

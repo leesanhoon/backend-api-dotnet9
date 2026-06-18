@@ -102,10 +102,6 @@ public class CategoryService(AppDbContext dbContext) : ICategoryService
         if (hasProducts)
             return new DeleteCategoryResult { HasLinkedProducts = true };
 
-        var hasLids = await dbContext.Lids.AnyAsync(x => x.CategoryId == id, cancellationToken);
-        if (hasLids)
-            return new DeleteCategoryResult { HasLinkedLids = true };
-
         dbContext.Categories.Remove(category);
         await dbContext.SaveChangesAsync(cancellationToken);
         return new DeleteCategoryResult { Deleted = true };

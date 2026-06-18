@@ -9,7 +9,7 @@ public interface IProductService
     Task<CreateOrUpdateProductResult> CreateAsync(CreateProductCommand command, CancellationToken cancellationToken);
     Task<CreateOrUpdateProductResult> UpdateAsync(int id, CreateProductCommand command, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken);
-    Task<IReadOnlyList<LidResponse>> GetCompatibleLidsAsync(int productId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ProductResponse>> GetCompatibleLidsAsync(int productId, CancellationToken cancellationToken);
     Task<AddImagesResult> AddImagesAsync(int productId, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken);
     Task<DeleteImageResult> DeleteImageAsync(int productId, int imageId, CancellationToken cancellationToken);
 }
@@ -21,7 +21,7 @@ public sealed record CreateProductCommand(
     IFormFile? AvatarImage,
     List<IFormFile>? GalleryImages,
     List<ProductVariantItem> Variants,
-    List<int> LidIds);
+    List<int> CompatibleProductIds);
 
 public sealed record ProductVariantItem(int CapacityMl, int DiameterMm, List<PriceTierItem> PriceTiers);
 
@@ -40,11 +40,11 @@ public sealed record ProductResponse(
 
 public sealed record ProductImageResponse(int Id, string ImageUrl, string ImageType, int DisplayOrder, DateTime CreatedAtUtc);
 
-public sealed record ProductVariantResponse(int Id, int CapacityMl, int DiameterMm, IReadOnlyList<PriceTierResponse> PriceTiers);
+public sealed record ProductVariantResponse(int Id, int CapacityMl, int DiameterMm, string? SizeName, IReadOnlyList<PriceTierResponse> PriceTiers);
 
 public sealed record PriceTierResponse(int Id, int MinQuantity, decimal UnitPrice);
 
-public sealed record ProductLidResponse(int Id, int LidId, string LidName);
+public sealed record ProductLidResponse(int Id, int CompatibleProductId, string CompatibleProductName);
 
 public sealed class CreateOrUpdateProductResult
 {

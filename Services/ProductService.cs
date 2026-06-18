@@ -13,7 +13,7 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             .Include(x => x.Category)
             .Include(x => x.ProductImages)
             .Include(x => x.Variants).ThenInclude(v => v.PriceTiers)
-            .Include(x => x.ProductLids).ThenInclude(pl => pl.Lid)
+            .Include(x => x.ProductLids).ThenInclude(pl => pl.CompatibleProduct)
             .OrderByDescending(x => x.Id);
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -27,7 +27,7 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             .Include(x => x.Category)
             .Include(x => x.ProductImages)
             .Include(x => x.Variants).ThenInclude(v => v.PriceTiers)
-            .Include(x => x.ProductLids).ThenInclude(pl => pl.Lid)
+            .Include(x => x.ProductLids).ThenInclude(pl => pl.CompatibleProduct)
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         return product is null ? null : MapToResponse(product);
@@ -68,9 +68,9 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             product.Variants.Add(variant);
         }
 
-        foreach (var lidId in command.LidIds.Distinct())
+        foreach (var lidId in command.CompatibleProductIds.Distinct())
         {
-            product.ProductLids.Add(new ProductLid { LidId = lidId });
+            product.ProductLids.Add(new ProductLid { CompatibleProductId = lidId });
         }
 
         dbContext.Products.Add(product);
@@ -142,9 +142,9 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             dbContext.ProductVariants.Add(variant);
         }
 
-        foreach (var lidId in command.LidIds.Distinct())
+        foreach (var lidId in command.CompatibleProductIds.Distinct())
         {
-            dbContext.ProductLids.Add(new ProductLid { ProductId = product.Id, LidId = lidId });
+            dbContext.ProductLids.Add(new ProductLid { ProductId = product.Id, CompatibleProductId = lidId });
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -164,7 +164,7 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
         return true;
     }
 
-    public async Task<IReadOnlyList<LidResponse>> GetCompatibleLidsAsync(int productId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ProductResponse>> GetCompatibleLidsAsync(int productId, CancellationToken cancellationToken)
     {
         var diameters = await dbContext.ProductVariants
             .Where(v => v.ProductId == productId)
@@ -172,28 +172,15 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        var lids = await dbContext.Lids.AsNoTracking()
-            .Include(l => l.Category)
-            .Include(l => l.Prices)
-            .Include(l => l.LidImages)
-            .Where(l => l.Prices.Any(p => diameters.Contains(p.DiameterMm)))
+        var compatibleProducts = await dbContext.Products.AsNoTracking()
+            .Include(x => x.Category)
+            .Include(x => x.ProductImages)
+            .Include(x => x.Variants).ThenInclude(v => v.PriceTiers)
+            .Include(x => x.ProductLids).ThenInclude(pl => pl.CompatibleProduct)
+            .Where(p => p.Id != productId && p.Variants.Any(v => v.CapacityMl == 0 && diameters.Contains(v.DiameterMm)))
             .ToListAsync(cancellationToken);
 
-        return lids.Select(l => new LidResponse(
-            l.Id,
-            l.Name,
-            l.Description,
-            l.CategoryId,
-            l.Category?.Name ?? string.Empty,
-            l.AvatarImageUrl,
-            l.LidImages.Where(x => x.ImageType == LidImageType.Gallery)
-                .OrderBy(x => x.DisplayOrder)
-                .Select(x => new LidImageResponse(x.Id, x.ImageUrl, x.ImageType.ToString().ToLowerInvariant(), x.DisplayOrder, x.CreatedAtUtc))
-                .ToList(),
-            l.Prices.OrderBy(p => p.DiameterMm)
-                .Select(p => new LidPriceResponse(p.Id, p.DiameterMm, p.SizeName, p.UnitPrice))
-                .ToList()
-        )).ToList();
+        return compatibleProducts.Select(MapToResponse).ToList();
     }
 
     public async Task<AddImagesResult> AddImagesAsync(int productId, IFormFile? avatarImage, List<IFormFile>? galleryImages, CancellationToken cancellationToken)
@@ -319,7 +306,7 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
             .Include(x => x.Category)
             .Include(x => x.ProductImages)
             .Include(x => x.Variants).ThenInclude(v => v.PriceTiers)
-            .Include(x => x.ProductLids).ThenInclude(pl => pl.Lid)
+            .Include(x => x.ProductLids).ThenInclude(pl => pl.CompatibleProduct)
             .FirstAsync(x => x.Id == id, cancellationToken);
 
         return MapToResponse(product);
@@ -339,13 +326,14 @@ public class ProductService(AppDbContext dbContext, ICloudinaryImageService clou
                 v.Id,
                 v.CapacityMl,
                 v.DiameterMm,
+                v.SizeName,
                 v.PriceTiers.OrderBy(t => t.MinQuantity)
                     .Select(t => new PriceTierResponse(t.Id, t.MinQuantity, t.UnitPrice))
                     .ToList()))
             .ToList();
 
         var lids = product.ProductLids
-            .Select(pl => new ProductLidResponse(pl.Id, pl.LidId, pl.Lid?.Name ?? string.Empty))
+            .Select(pl => new ProductLidResponse(pl.Id, pl.CompatibleProductId, pl.CompatibleProduct?.Name ?? string.Empty))
             .ToList();
 
         return new ProductResponse(

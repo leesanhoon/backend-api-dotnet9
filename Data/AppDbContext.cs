@@ -10,9 +10,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<VariantPriceTier> VariantPriceTiers => Set<VariantPriceTier>();
-    public DbSet<Lid> Lids => Set<Lid>();
-    public DbSet<LidPrice> LidPrices => Set<LidPrice>();
-    public DbSet<LidImage> LidImages => Set<LidImage>();
     public DbSet<ProductLid> ProductLids => Set<ProductLid>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
@@ -67,7 +64,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             entity.ToTable("product_variants");
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => new { x.ProductId, x.CapacityMl }).IsUnique();
+            entity.Property(x => x.SizeName).HasMaxLength(100);
+            entity.HasIndex(x => new { x.ProductId, x.CapacityMl, x.DiameterMm }).IsUnique();
             entity.HasOne(x => x.Product)
                 .WithMany(x => x.Variants)
                 .HasForeignKey(x => x.ProductId)
@@ -86,59 +84,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Lid>(entity =>
-        {
-            entity.ToTable("lids");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
-            entity.Property(x => x.Description).HasMaxLength(500);
-            entity.Property(x => x.AvatarImageUrl).HasColumnName("avatar_image_url").HasMaxLength(1000);
-            entity.HasIndex(x => x.CategoryId);
-            entity.HasOne(x => x.Category)
-                .WithMany(x => x.Lids)
-                .HasForeignKey(x => x.CategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<LidImage>(entity =>
-        {
-            entity.ToTable("lid_images");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.ImageType).HasConversion<string>().HasMaxLength(20).IsRequired();
-            entity.Property(x => x.ImageUrl).HasMaxLength(1000).IsRequired();
-            entity.Property(x => x.DisplayOrder).HasDefaultValue(0);
-            entity.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc");
-            entity.HasOne(x => x.Lid)
-                .WithMany(x => x.LidImages)
-                .HasForeignKey(x => x.LidId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<LidPrice>(entity =>
-        {
-            entity.ToTable("lid_prices");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.SizeName).HasMaxLength(100);
-            entity.Property(x => x.UnitPrice).HasPrecision(18, 2);
-            entity.HasIndex(x => new { x.LidId, x.DiameterMm }).IsUnique();
-            entity.HasOne(x => x.Lid)
-                .WithMany(x => x.Prices)
-                .HasForeignKey(x => x.LidId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<ProductLid>(entity =>
         {
             entity.ToTable("product_lids");
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => new { x.ProductId, x.LidId }).IsUnique();
+            entity.HasIndex(x => new { x.ProductId, x.CompatibleProductId }).IsUnique();
             entity.HasOne(x => x.Product)
                 .WithMany(x => x.ProductLids)
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.Lid)
-                .WithMany(x => x.ProductLids)
-                .HasForeignKey(x => x.LidId)
+            entity.HasOne(x => x.CompatibleProduct)
+                .WithMany()
+                .HasForeignKey(x => x.CompatibleProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -168,7 +125,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(x => x.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(x => x.Lid)
+            entity.HasOne(x => x.LidProduct)
                 .WithMany()
                 .HasForeignKey(x => x.LidId)
                 .OnDelete(DeleteBehavior.Restrict);

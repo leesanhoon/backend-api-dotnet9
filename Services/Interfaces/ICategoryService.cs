@@ -30,5 +30,4 @@ public sealed class DeleteCategoryResult
     public bool IsRootProtected { get; init; }
     public bool HasLinkedProducts { get; init; }
     public bool HasChildren { get; init; }
-    public bool HasLinkedLids { get; init; }
 }

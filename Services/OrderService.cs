@@ -55,7 +55,7 @@ public class OrderService(AppDbContext dbContext, ITelegramNotificationService t
     {
         var order = await dbContext.Orders.AsNoTracking()
             .Include(o => o.Items).ThenInclude(i => i.Product)
-            .Include(o => o.Items).ThenInclude(i => i.Lid)
+            .Include(o => o.Items).ThenInclude(i => i.LidProduct)
             .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerPhone.Contains(phone), cancellationToken);
 
         return order is null ? null : MapToDetailDto(order);
@@ -95,7 +95,7 @@ public class OrderService(AppDbContext dbContext, ITelegramNotificationService t
 
         var order = await dbContext.Orders
             .Include(o => o.Items).ThenInclude(i => i.Product)
-            .Include(o => o.Items).ThenInclude(i => i.Lid)
+            .Include(o => o.Items).ThenInclude(i => i.LidProduct)
             .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
         if (order is null)
@@ -118,7 +118,7 @@ public class OrderService(AppDbContext dbContext, ITelegramNotificationService t
     {
         var order = await dbContext.Orders.AsNoTracking()
             .Include(o => o.Items).ThenInclude(i => i.Product)
-            .Include(o => o.Items).ThenInclude(i => i.Lid)
+            .Include(o => o.Items).ThenInclude(i => i.LidProduct)
             .FirstAsync(o => o.Id == id, cancellationToken);
 
         return MapToDetailDto(order);
@@ -134,7 +134,7 @@ public class OrderService(AppDbContext dbContext, ITelegramNotificationService t
             i.PrintTypeId,
             null,
             i.LidId,
-            i.Lid?.Name,
+            i.LidProduct?.Name,
             i.Quantity,
             i.UnitPrice
         )).ToList();

@@ -1,110 +1,165 @@
-# Order API Update — Add Lid Support to Order Items
+# API Update — Merge Lid into Product
 
 **Date:** 2026-06-18  
-**Version:** v1.1.0  
-**Status:** Ready for client integration
+**Version:** v2.0.0  
+**Status:** Breaking change — requires client update
 
 ---
 
 ## Summary
 
-Order items now support an optional `lidId` field, allowing customers to select a specific lid when placing an order. Previously, the `order_items` table had no relationship to the `lids` table, causing errors when attempting to create orders that include lid selections.
+Nắp ly (Lid) không còn là entity riêng biệt. Nắp ly giờ được lưu trữ và quản lý như **Product** thông thường, chỉ khác ở `CapacityMl = 0` trong variants. Toàn bộ Lid API endpoints đã bị xoá và thay thế bằng Product API.
 
 ---
 
-## Database Changes
+## Breaking Changes
 
-### Migration: `AddLidIdToOrderItem`
+### 1. Lid API Endpoints — REMOVED
 
-| Action | Table | Column | Type | Nullable |
-|--------|-------|--------|------|----------|
-| ADD COLUMN | `order_items` | `LidId` | `integer` | Yes |
-| ADD INDEX | `order_items` | `IX_order_items_LidId` | — | — |
-| ADD FK | `order_items` → `lids` | `FK_order_items_lids_LidId` | Restrict | — |
+Toàn bộ endpoints dưới đây **đã bị xoá**:
 
-> **Note:** The foreign key uses `Restrict` delete behavior — a lid cannot be deleted if it is referenced by any order item.
+| Method | Endpoint | Replacement |
+|--------|----------|-------------|
+| `GET` | `/api/v1/lids` | `GET /api/v1/products` (filter by lid category) |
+| `GET` | `/api/v1/lids/{id}` | `GET /api/v1/products/{id}` |
+| `POST` | `/api/v1/lids` | `POST /api/v1/products` (with `capacityMl = 0`) |
+| `PUT` | `/api/v1/lids/{id}` | `PUT /api/v1/products/{id}` |
+| `DELETE` | `/api/v1/lids/{id}` | `DELETE /api/v1/products/{id}` |
+| `POST` | `/api/v1/lids/{id}/images` | `POST /api/v1/products/{id}/images` |
+| `DELETE` | `/api/v1/lids/{id}/images/{imageId}` | `DELETE /api/v1/products/{id}/images/{imageId}` |
 
----
+### 2. Product Request Schema — Field Renamed
 
-## API Changes
+| Old Field | New Field | Affected Endpoints |
+|-----------|-----------|--------------------|
+| `lidIds` | `compatibleProductIds` | `POST /api/v1/products`, `PUT /api/v1/products/{id}` |
 
-### POST `/api/orders` — Create Order
-
-#### Request Body (Updated)
-
-```json
-{
-  "customerName": "string",
-  "customerPhone": "string",
-  "customerEmail": "string | null",
-  "note": "string | null",
-  "items": [
-    {
-      "productId": 1,
-      "quantity": 2,
-      "unitPrice": 50000,
-      "materialId": 1,
-      "printTypeId": 1,
-      "lidId": 3          // <-- NEW (optional)
-    }
-  ]
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `lidId` | `integer \| null` | No | ID of the lid to include with this product. Must reference a valid record in the `lids` table. Pass `null` or omit if no lid is needed. |
-
-#### Response Body (Updated)
-
-All endpoints that return order details now include `lidId` and `lidName` in each order item:
+### 3. Product Response Schema — Updated
 
 ```json
 {
   "id": 1,
-  "customerName": "Nguyen Van A",
-  "customerPhone": "0901234567",
-  "customerEmail": null,
-  "note": null,
-  "totalAmount": 100000,
-  "status": "pendingconfirmation",
-  "createdAtUtc": "2026-06-18T01:00:00Z",
-  "items": [
+  "name": "Ly giấy 12oz",
+  "description": "...",
+  "categoryId": 1,
+  "categoryName": "Ly giấy",
+  "avatarImageUrl": "https://...",
+  "galleryImages": [...],
+  "variants": [
     {
-      "productId": 1,
-      "productName": "Ly giấy 12oz",
-      "materialId": 1,
-      "materialName": null,
-      "printTypeId": 1,
-      "printTypeName": null,
-      "lidId": 3,              // <-- NEW
-      "lidName": "Nắp phẳng",  // <-- NEW
-      "quantity": 2,
-      "unitPrice": 50000
+      "id": 1,
+      "capacityMl": 350,
+      "diameterMm": 90,
+      "sizeName": null,        // <-- NEW (nullable, used by lid-type products)
+      "priceTiers": [
+        { "id": 1, "minQuantity": 100, "unitPrice": 500 }
+      ]
+    }
+  ],
+  "lids": [
+    {
+      "id": 1,
+      "compatibleProductId": 5,       // <-- RENAMED (was "lidId")
+      "compatibleProductName": "Nắp phẳng"  // <-- RENAMED (was "lidName")
     }
   ]
 }
 ```
 
-| New Field | Type | Description |
-|-----------|------|-------------|
-| `lidId` | `integer \| null` | The lid ID associated with this order item, or `null` if none. |
-| `lidName` | `string \| null` | Display name of the lid, or `null` if no lid is selected. |
-
-### Affected Endpoints
-
-| Method | Endpoint | Change |
-|--------|----------|--------|
-| `POST` | `/api/orders` | Request accepts `lidId`; response includes `lidId` + `lidName` |
-| `GET` | `/api/orders/{id}/track?phone={phone}` | Response includes `lidId` + `lidName` |
-| `GET` | `/api/orders` | No change (summary only, no item details) |
-| `PUT` | `/api/orders/{id}/status` | Response includes `lidId` + `lidName` |
+| Changed Field | Old Name | New Name | Notes |
+|---------------|----------|----------|-------|
+| `variants[].sizeName` | — | `sizeName` | New field. `null` for cups, contains size label for lids |
+| `lids[].lidId` | `lidId` | `compatibleProductId` | Now references a product ID |
+| `lids[].lidName` | `lidName` | `compatibleProductName` | Name of the compatible product |
 
 ---
 
-## Migration Command
+## How to Create a Lid-Type Product
 
-Run the following command on the server to apply the database migration:
+Nắp ly giờ là product với `capacityMl = 0` trong variants:
+
+```json
+POST /api/v1/products
+Content-Type: multipart/form-data
+
+{
+  "name": "Nắp phẳng",
+  "description": "Nắp phẳng cho ly 90mm",
+  "categoryId": 2,
+  "avatarImage": <file>,
+  "galleryImages": [<file>, ...],
+  "variants": [
+    {
+      "capacityMl": 0,
+      "diameterMm": 90,
+      "sizeName": "90mm",
+      "priceTiers": [
+        { "minQuantity": 1, "unitPrice": 200 }
+      ]
+    }
+  ],
+  "compatibleProductIds": []
+}
+```
+
+**Key differences from cup products:**
+- `capacityMl` = `0` (lids have no capacity)
+- `sizeName` = tên kích cỡ miệng (e.g., "90mm", "80mm")
+- `priceTiers` thường chỉ có 1 mốc giá với `minQuantity = 1`
+
+---
+
+## Order API — Minor Changes
+
+### POST `/api/orders` — Create Order
+
+Request body **không đổi**:
+
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 100,
+      "unitPrice": 500,
+      "materialId": 1,
+      "printTypeId": 1,
+      "lidId": 5        // Still "lidId" — now references a product ID
+    }
+  ]
+}
+```
+
+Response body **không đổi** — `lidId` và `lidName` vẫn giữ nguyên field names.
+
+> **Note:** `lidId` trong order items giờ trỏ đến `products.Id` thay vì `lids.Id`. Giá trị ID có thể khác vì dữ liệu đã được migrate sang bảng products.
+
+---
+
+## Database Migration
+
+### Schema Changes
+
+| Table | Change |
+|-------|--------|
+| `product_variants` | Added `SizeName` (varchar 100, nullable) |
+| `product_variants` | Unique index changed: `(ProductId, CapacityMl)` → `(ProductId, CapacityMl, DiameterMm)` |
+| `product_lids` | Column renamed: `LidId` → `CompatibleProductId` |
+| `product_lids` | FK now references `products` instead of `lids` |
+| `order_items` | FK `LidId` now references `products` instead of `lids` |
+| `lids` | **DROPPED** (data migrated to `products`) |
+| `lid_prices` | **DROPPED** (data migrated to `product_variants` + `variant_price_tiers`) |
+| `lid_images` | **DROPPED** (data migrated to `product_images`) |
+
+### Data Migration
+
+Migration tự động chuyển:
+- `lids` → `products`
+- `lid_prices` → `product_variants` (CapacityMl = 0) + `variant_price_tiers` (MinQuantity = 1)
+- `lid_images` → `product_images`
+- Cập nhật `product_lids` và `order_items` FKs sang product IDs mới
+
+### Run Migration
 
 ```bash
 dotnet ef database update
@@ -112,8 +167,6 @@ dotnet ef database update
 
 ---
 
-## Breaking Changes
+## Compatible Lids Endpoint
 
-**Response schema change:** The `items` array in order detail responses now includes two new fields (`lidId`, `lidName`) between `printTypeName` and `quantity`. Clients that destructure the response by field name will not be affected. Clients that rely on positional parsing may need to update.
-
-**No breaking change on request:** The `lidId` field is optional and defaults to `null` when omitted. Existing client code that does not send `lidId` will continue to work without modification.
+`GET /api/v1/products/{id}/compatible-lids` vẫn hoạt động nhưng giờ trả về `ProductResponse[]` thay vì `LidResponse[]`. Response format giống hệt endpoint `GET /api/v1/products/{id}`.

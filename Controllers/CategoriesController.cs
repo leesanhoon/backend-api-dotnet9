@@ -64,7 +64,6 @@ public class CategoriesController(ICategoryService categoryService) : Controller
         if (result.IsRootProtected) return BadRequest("Không thể xoá danh mục gốc.");
         if (result.HasChildren) return BadRequest("Không thể xoá danh mục đang có danh mục con.");
         if (result.HasLinkedProducts) return BadRequest("Không thể xoá danh mục đang có sản phẩm.");
-        if (result.HasLinkedLids) return BadRequest("Không thể xoá danh mục đang có nắp ly.");
 
         return NoContent();
     }

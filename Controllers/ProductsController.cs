@@ -35,7 +35,7 @@ public class ProductsController(IProductService productService) : ControllerBase
             request.AvatarImage,
             request.GalleryImages,
             request.Variants,
-            request.LidIds ?? []);
+            request.CompatibleProductIds ?? []);
 
         var result = await productService.CreateAsync(command, cancellationToken);
 
@@ -56,7 +56,7 @@ public class ProductsController(IProductService productService) : ControllerBase
             null,
             null,
             request.Variants,
-            request.LidIds ?? []);
+            request.CompatibleProductIds ?? []);
 
         var result = await productService.UpdateAsync(id, command, cancellationToken);
 
@@ -75,7 +75,7 @@ public class ProductsController(IProductService productService) : ControllerBase
     }
 
     [HttpGet("{id:int}/compatible-lids")]
-    public async Task<ActionResult<IReadOnlyList<LidResponse>>> GetCompatibleLids(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<ProductResponse>>> GetCompatibleLids(int id, CancellationToken cancellationToken)
     {
         var lids = await productService.GetCompatibleLidsAsync(id, cancellationToken);
         return Ok(lids);
@@ -112,14 +112,14 @@ public sealed record CreateProductRequest(
     IFormFile? AvatarImage,
     List<IFormFile>? GalleryImages,
     List<ProductVariantItem> Variants,
-    List<int>? LidIds);
+    List<int>? CompatibleProductIds);
 
 public sealed record UpdateProductRequest(
     string Name,
     string? Description,
     int CategoryId,
     List<ProductVariantItem> Variants,
-    List<int>? LidIds);
+    List<int>? CompatibleProductIds);
 
 public sealed record AddProductImagesRequest(
     IFormFile? AvatarImage,
