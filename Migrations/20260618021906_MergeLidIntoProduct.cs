@@ -29,66 +29,43 @@ namespace backend_api_dotnet9.Migrations
                 maxLength: 100,
                 nullable: true);
 
-            // 3. Data migration: lids → products
+            // 3. Data migration: lids → products using a temporary column for reliable mapping
             migrationBuilder.Sql(@"
-                -- Create temp mapping table to track old lid IDs → new product IDs
+                -- Add temp column to products to hold the source lid ID
+                ALTER TABLE products ADD COLUMN _source_lid_id integer;
+
+                -- Insert lids into products, tagging each row with the original lid ID
+                INSERT INTO products (""Name"", ""Description"", ""CategoryId"", ""avatar_image_url"", _source_lid_id)
+                SELECT ""Name"", ""Description"", ""CategoryId"", ""avatar_image_url"", ""Id""
+                FROM lids;
+
+                -- Build mapping table from the temp column
                 CREATE TEMP TABLE lid_to_product_map (
                     old_lid_id integer NOT NULL,
                     new_product_id integer NOT NULL
                 );
 
-                -- Insert lids into products and capture the mapping
-                INSERT INTO products (""Name"", ""Description"", ""CategoryId"", ""avatar_image_url"")
-                SELECT ""Name"", ""Description"", ""CategoryId"", ""avatar_image_url""
-                FROM lids;
-
-                -- Build the mapping using row order (lids are inserted in Id order)
                 INSERT INTO lid_to_product_map (old_lid_id, new_product_id)
-                SELECT l.""Id"", p.""Id""
-                FROM (
-                    SELECT ""Id"", ""Name"", ""CategoryId"",
-                           ROW_NUMBER() OVER (ORDER BY ""Id"") AS rn
-                    FROM lids
-                ) l
-                JOIN (
-                    SELECT ""Id"",
-                           ROW_NUMBER() OVER (ORDER BY ""Id"" DESC) AS rn
-                    FROM products
-                    WHERE ""Id"" NOT IN (
-                        SELECT ""Id"" FROM products
-                        WHERE ""Id"" NOT IN (
-                            SELECT p2.""Id"" FROM products p2
-                            ORDER BY p2.""Id"" DESC
-                            LIMIT (SELECT COUNT(*) FROM lids)
-                        )
-                    )
-                ) p ON 1=0;
+                SELECT _source_lid_id, ""Id""
+                FROM products
+                WHERE _source_lid_id IS NOT NULL;
+
+                -- Drop the temp column
+                ALTER TABLE products DROP COLUMN _source_lid_id;
             ");
 
-            // Simpler mapping approach using name+category match
-            migrationBuilder.Sql(@"
-                -- Clear and rebuild mapping using a more reliable approach
-                DELETE FROM lid_to_product_map;
+            // 4. Replace unique index BEFORE inserting lid data (old index blocks multiple CapacityMl=0 rows per product)
+            migrationBuilder.DropIndex(
+                name: "IX_product_variants_ProductId_CapacityMl",
+                table: "product_variants");
 
-                -- Use a CTE to match lids to their newly inserted products
-                -- Since we just inserted, the newest products with matching name+category are the migrated lids
-                WITH ranked_products AS (
-                    SELECT p.""Id"" as new_product_id, p.""Name"", p.""CategoryId"",
-                           ROW_NUMBER() OVER (PARTITION BY p.""Name"", p.""CategoryId"" ORDER BY p.""Id"" DESC) as rn
-                    FROM products p
-                ),
-                lid_match AS (
-                    SELECT l.""Id"" as old_lid_id, rp.new_product_id
-                    FROM lids l
-                    JOIN ranked_products rp ON rp.""Name"" = l.""Name""
-                        AND rp.""CategoryId"" = l.""CategoryId""
-                        AND rp.rn = 1
-                )
-                INSERT INTO lid_to_product_map (old_lid_id, new_product_id)
-                SELECT old_lid_id, new_product_id FROM lid_match;
-            ");
+            migrationBuilder.CreateIndex(
+                name: "IX_product_variants_ProductId_CapacityMl_DiameterMm",
+                table: "product_variants",
+                columns: new[] { "ProductId", "CapacityMl", "DiameterMm" },
+                unique: true);
 
-            // 4. Migrate lid_prices → product_variants + variant_price_tiers
+            // 5. Migrate lid_prices → product_variants + variant_price_tiers
             migrationBuilder.Sql(@"
                 -- Insert lid_prices as product_variants (CapacityMl = 0 for lids)
                 INSERT INTO product_variants (""ProductId"", ""CapacityMl"", ""DiameterMm"", ""SizeName"")
@@ -143,18 +120,7 @@ namespace backend_api_dotnet9.Migrations
             migrationBuilder.DropTable(
                 name: "lids");
 
-            // 10. Update unique index on product_variants
-            migrationBuilder.DropIndex(
-                name: "IX_product_variants_ProductId_CapacityMl",
-                table: "product_variants");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_product_variants_ProductId_CapacityMl_DiameterMm",
-                table: "product_variants",
-                columns: new[] { "ProductId", "CapacityMl", "DiameterMm" },
-                unique: true);
-
-            // 11. Rename LidId → CompatibleProductId in product_lids
+            // 10. Rename LidId → CompatibleProductId in product_lids
             migrationBuilder.RenameColumn(
                 name: "LidId",
                 table: "product_lids",
